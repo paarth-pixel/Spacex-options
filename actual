@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPCX Options Pricer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0e14;--surface:#13171f;--border:rgba(255,255,255,0.08);--text:#e4e8f2;--muted:#64708a;--accent:#5b8ef5;--green:#2dc87a;--red:#f05555;--amber:#f5a623;--mono:'JetBrains Mono',monospace;--sans:'Inter',sans-serif;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;}
+nav{display:flex;align-items:center;padding:0 2rem;height:52px;border-bottom:1px solid var(--border);gap:12px;}
+.logo{font-family:var(--mono);font-size:13px;font-weight:500;}
+.logo span{color:var(--accent);}
+.pill{font-size:11px;padding:2px 8px;border-radius:4px;background:rgba(91,142,245,0.1);color:var(--accent);border:1px solid rgba(91,142,245,0.25);font-family:var(--mono);}
+.nav-right{margin-left:auto;font-size:12px;color:var(--muted);}
+.main{max-width:900px;margin:0 auto;padding:2rem;}
+h1{font-size:24px;font-weight:600;letter-spacing:-0.02em;margin-bottom:4px;}
+h1 span{color:var(--accent);}
+.sub{color:var(--muted);font-size:13px;margin-bottom:2rem;}
+.source-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:3px 10px;border-radius:4px;font-family:var(--mono);margin-bottom:1.5rem;}
+.source-live{background:rgba(45,200,122,0.12);color:var(--green);border:1px solid rgba(45,200,122,0.25);}
+.source-fallback{background:rgba(245,166,35,0.12);color:var(--amber);border:1px solid rgba(245,166,35,0.25);}
+.dot{width:6px;height:6px;border-radius:50%;animation:blink 2s infinite;}
+.dot-green{background:var(--green);}
+.dot-amber{background:var(--amber);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:2rem;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;}
+.card-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);margin-bottom:4px;}
+.card-value{font-family:var(--mono);font-size:20px;font-weight:500;}
+.green{color:var(--green);}
+.red{color:var(--red);}
+.amber{color:var(--amber);}
+.ctrl{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:16px;}
+.ctrl label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);white-space:nowrap;}
+.ctrl input[type=range]{flex:1;}
+.ctrl .val{font-family:var(--mono);font-size:18px;font-weight:500;min-width:60px;text-align:right;}
+.table-wrap{border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{background:var(--surface);padding:10px 16px;text-align:left;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);border-bottom:1px solid var(--border);}
+tbody tr{border-bottom:1px solid var(--border);transition:background 0.1s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:var(--surface);}
+tbody tr.atm{background:rgba(91,142,245,0.06);}
+td{padding:10px 16px;font-family:var(--mono);}
+.badge{font-size:10px;padding:2px 7px;border-radius:4px;}
+.b-blue{background:rgba(91,142,245,0.12);color:var(--accent);}
+.b-green{background:rgba(45,200,122,0.12);color:var(--green);}
+.b-red{background:rgba(240,85,85,0.12);color:var(--red);}
+footer{text-align:center;padding:2rem;font-size:12px;color:var(--muted);border-top:1px solid var(--border);margin-top:3rem;}
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo">SPCX <span>Options</span></div>
+  <span class="pill">Black-Scholes</span>
+  <div class="nav-right">σ = 100% · r = 4% · Expiry Jan 16 2027</div>
+</nav>
+
+<div class="main">
+  <h1>SPCX <span>Option Pricer</span></h1>
+  <p class="sub">European calls and puts · Strikes $100–$200 · Live price via Yahoo Finance</p>
+
+  <div id="sourceBadge" class="source-badge source-fallback">
+    <span class="dot dot-amber"></span>
+    <span id="sourceText">Fetching live price...</span>
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="card-label">Stock price (live)</div><div class="card-value" id="stockCard">...</div></div>
+    <div class="card"><div class="card-label">Implied vol</div><div class="card-value amber">100%</div></div>
+    <div class="card"><div class="card-label">Risk-free rate</div><div class="card-value">4.00%</div></div>
+    <div class="card"><div class="card-label">Days to expiry</div><div class="card-value" id="dteCard">—</div></div>
+    <div class="card"><div class="card-label">ATM Call</div><div class="card-value green" id="atmCall">—</div></div>
+    <div class="card"><div class="card-label">ATM Put</div><div class="card-value red" id="atmPut">—</div></div>
+  </div>
+
+  <div class="ctrl">
+    <label>Highlight strike</label>
+    <input type="range" min="100" max="200" step="10" value="160" id="strikeSlider" oninput="render()">
+    <span class="val" id="strikeVal">$160</span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Strike</th>
+          <th>Status</th>
+          <th style="color:var(--green)">Call price</th>
+          <th style="color:var(--green)">Intrinsic</th>
+          <th style="color:var(--green)">Time value</th>
+          <th style="color:var(--red)">Put price</th>
+          <th style="color:var(--red)">Intrinsic</th>
+          <th style="color:var(--red)">Time value</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem">Loading...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<footer>Black-Scholes · Yahoo Finance price feed · Educational purposes only · Not financial advice</footer>
+
+<script>
+const FALLBACK = 166;
+const FMP_KEY = 'oYsgqkQeFD32MWERNbj29qo6XcoSjqeg';
+const sig = 1.0, r = 0.04;
+const STRIKES = [100,110,120,130,140,150,160,170,180,190,200];
+let S = FALLBACK;
+
+function erf(x){
+  const t=1/(1+0.3275911*Math.abs(x));
+  const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);
+  return x<0?-y:y;
+}
+function N(x){return 0.5*(1+erf(x/Math.sqrt(2)));}
+function bs(K,type){
+  const T=daysLeft()/365;
+  const d1=(Math.log(S/K)+(r+sig*sig/2)*T)/(sig*Math.sqrt(T));
+  const d2=d1-sig*Math.sqrt(T);
+  return type==='call'?S*N(d1)-K*Math.exp(-r*T)*N(d2):K*Math.exp(-r*T)*N(-d2)-S*N(-d1);
+}
+function daysLeft(){
+  return Math.max(1,Math.round((new Date('2027-01-16')-new Date())/86400000));
+}
+function fmt(n){return '$'+n.toFixed(2);}
+
+function setSource(live, price, source){
+  const badge=document.getElementById('sourceBadge');
+  const text=document.getElementById('sourceText');
+  badge.className='source-badge '+(live?'source-live':'source-fallback');
+  badge.querySelector('.dot').className='dot '+(live?'dot-green':'dot-amber');
+  text.textContent=live?`Live · $${price.toFixed(2)} via ${source}`:`Fallback price $${price.toFixed(2)} · Yahoo Finance blocked (CORS)`;
+}
+
+function render(){
+  const sel=parseInt(document.getElementById('strikeSlider').value);
+  document.getElementById('strikeVal').textContent='$'+sel;
+  document.getElementById('stockCard').textContent=fmt(S);
+  document.getElementById('dteCard').textContent=daysLeft();
+  const atmK=STRIKES.reduce((a,b)=>Math.abs(b-S)<Math.abs(a-S)?b:a);
+  document.getElementById('atmCall').textContent=fmt(bs(atmK,'call'));
+  document.getElementById('atmPut').textContent=fmt(bs(atmK,'put'));
+
+  document.getElementById('tbody').innerHTML=STRIKES.map(K=>{
+    const c=bs(K,'call'),p=bs(K,'put');
+    const ci=Math.max(0,S-K),pi=Math.max(0,K-S);
+    const isATM=K===atmK,isSel=K===sel;
+    const badge=isATM?'ATM':K<S?'Call ITM':'Put ITM';
+    const bc=isATM?'b-blue':K<S?'b-green':'b-red';
+    return `<tr class="${isATM?'atm':''}" ${isSel?'style="outline:1.5px solid var(--accent);outline-offset:-1px;"':''}>
+      <td style="font-weight:600;font-size:15px">$${K}</td>
+      <td><span class="badge ${bc}">${badge}</span></td>
+      <td class="green">${fmt(c)}</td>
+      <td style="color:var(--muted)">${fmt(ci)}</td>
+      <td style="color:var(--accent)">${fmt(c-ci)}</td>
+      <td class="red">${fmt(p)}</td>
+      <td style="color:var(--muted)">${fmt(pi)}</td>
+      <td style="color:var(--accent)">${fmt(p-pi)}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function fetchYahoo(){
+  try {
+    const res=await fetch('https://query1.finance.yahoo.com/v8/finance/chart/SPCX?interval=1d&range=1d');
+    if(!res.ok) throw new Error('bad status');
+    const json=await res.json();
+    const price=json?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    if(!price||price<=0) throw new Error('no price');
+    return price;
+  } catch(e){ return null; }
+}
+
+async function fetchFMP(){
+  try {
+    const res=await fetch(`https://financialmodelingprep.com/stable/quote?symbol=SPCX&apikey=${FMP_KEY}`);
+    if(!res.ok) throw new Error('bad status');
+    const json=await res.json();
+    const price=json?.[0]?.price;
+    if(!price||price<=0) throw new Error('no price');
+    return price;
+  } catch(e){ return null; }
+}
+
+async function init(){
+  render();
+  let price=await fetchYahoo();
+  if(price){
+    S=price; setSource(true,price,'Yahoo Finance'); render(); return;
+  }
+  price=await fetchFMP();
+  if(price){
+    S=price; setSource(true,price,'Financial Modeling Prep'); render(); return;
+  }
+  S=FALLBACK; setSource(false,FALLBACK,''); render();
+}
+
+init();
+</script>
+</body>
+</html>
