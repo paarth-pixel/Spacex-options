@@ -3,510 +3,202 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SPCX Options Pricer — Black-Scholes</title>
+<title>SPCX Options Pricer</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg: #0b0e14;
-  --surface: #13171f;
-  --surface2: #1c2130;
-  --border: rgba(255,255,255,0.07);
-  --border2: rgba(255,255,255,0.13);
-  --text: #e4e8f2;
-  --muted: #64708a;
-  --accent: #5b8ef5;
-  --green: #2dc87a;
-  --green-dim: rgba(45,200,122,0.10);
-  --red: #f05555;
-  --red-dim: rgba(240,85,85,0.10);
-  --amber: #f5a623;
-  --amber-dim: rgba(245,166,35,0.10);
-  --blue-dim: rgba(91,142,245,0.10);
-  --mono: 'JetBrains Mono', monospace;
-  --sans: 'Inter', sans-serif;
-  --r: 8px;
-  --r-lg: 12px;
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body { font-family: var(--sans); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; min-height: 100vh; }
-
-/* NAV */
-nav { position: sticky; top: 0; z-index: 100; background: rgba(11,14,20,0.9); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 2rem; height: 52px; gap: 1.5rem; }
-.nav-logo { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.05em; }
-.nav-logo span { color: var(--accent); }
-.nav-tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: var(--blue-dim); color: var(--accent); border: 1px solid rgba(91,142,245,0.25); font-family: var(--mono); }
-.nav-right { margin-left: auto; display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--muted); }
-.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: blink 2s infinite; }
-@keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
-
-/* HERO */
-.hero { padding: 2.5rem 2rem 2rem; border-bottom: 1px solid var(--border); max-width: 1300px; margin: 0 auto; }
-.hero-eyebrow { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.75rem; }
-.hero-row { display: flex; align-items: flex-end; gap: 2rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
-.hero h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; }
-.hero h1 span { color: var(--accent); }
-.stock-price-badge { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--r); padding: 8px 16px; text-align: center; }
-.stock-price-badge .label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); }
-.stock-price-badge .price { font-family: var(--mono); font-size: 22px; font-weight: 500; color: var(--text); }
-.stock-price-badge .change { font-size: 11px; color: var(--red); font-family: var(--mono); }
-.hero-desc { font-size: 13px; color: var(--muted); max-width: 640px; line-height: 1.7; }
-
-/* CONTROLS */
-.controls { max-width: 1300px; margin: 0 auto; padding: 1.5rem 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; border-bottom: 1px solid var(--border); }
-.ctrl { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 1rem 1.25rem; }
-.ctrl label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); display: block; margin-bottom: 6px; }
-.ctrl-row { display: flex; align-items: center; gap: 8px; }
-.ctrl input[type=range] { flex: 1; }
-.ctrl .val { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--text); min-width: 64px; text-align: right; }
-.ctrl .sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
-
-/* SUMMARY CARDS */
-.summary { max-width: 1300px; margin: 0 auto; padding: 1.5rem 2rem 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 0.875rem 1rem; }
-.stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; font-family: var(--mono); margin-bottom: 4px; }
-.stat-value { font-family: var(--mono); font-size: 20px; font-weight: 500; color: var(--text); }
-.stat-value.green { color: var(--green); }
-.stat-value.amber { color: var(--amber); }
-.stat-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
-
-/* TABS */
-.tabs { max-width: 1300px; margin: 0 auto; padding: 1.5rem 2rem 0; display: flex; gap: 8px; }
-.tab { font-size: 13px; font-weight: 500; padding: 6px 16px; border-radius: var(--r); border: 1px solid var(--border2); background: transparent; color: var(--muted); cursor: pointer; font-family: var(--sans); transition: all 0.15s; }
-.tab:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
-.tab.active { background: var(--blue-dim); color: var(--accent); border-color: rgba(91,142,245,0.3); }
-
-/* TABLE SECTION */
-.table-section { max-width: 1300px; margin: 0 auto; padding: 1rem 2rem 3rem; }
-.table-wrap { border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
-thead th { background: var(--surface); padding: 10px 14px; text-align: left; font-size: 10px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border); white-space: nowrap; font-family: var(--mono); }
-thead .group-header { text-align: center; border-bottom: 1px solid var(--border); border-left: 1px solid var(--border); padding: 6px 14px; }
-thead .group-header.calls { color: var(--green); }
-thead .group-header.puts { color: var(--red); }
-tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
-tbody tr:last-child { border-bottom: none; }
-tbody tr:hover { background: var(--surface); }
-tbody tr.atm { background: rgba(91,142,245,0.05); }
-tbody tr.atm:hover { background: rgba(91,142,245,0.09); }
-tbody tr.itm-call { background: rgba(45,200,122,0.03); }
-tbody tr.itm-put { background: rgba(240,85,85,0.03); }
-td { padding: 10px 14px; color: var(--text); white-space: nowrap; }
-td.mono { font-family: var(--mono); }
-td.muted { color: var(--muted); font-size: 12px; }
-td.green { color: var(--green); font-family: var(--mono); }
-td.red { color: var(--red); font-family: var(--mono); }
-td.amber { color: var(--amber); font-family: var(--mono); font-size: 11px; }
-td.accent { color: var(--accent); font-family: var(--mono); }
-td.border-left { border-left: 1px solid var(--border); }
-
-.badge { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 4px; font-family: var(--mono); }
-.badge-green { background: var(--green-dim); color: var(--green); }
-.badge-red { background: var(--red-dim); color: var(--red); }
-.badge-blue { background: var(--blue-dim); color: var(--accent); }
-.badge-amber { background: var(--amber-dim); color: var(--amber); }
-
-/* EXPLANATION */
-.explainer { max-width: 1300px; margin: 0 auto; padding: 0 2rem 3rem; }
-.explainer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
-.exp-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 1.25rem 1.5rem; }
-.exp-card h3 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
-.exp-card p { font-size: 13px; color: var(--muted); line-height: 1.7; }
-.exp-card p strong { color: var(--text); font-weight: 500; }
-
-/* COMPARISON NOTE */
-.compare-note { max-width: 1300px; margin: 0 auto 3rem; padding: 0 2rem; }
-.compare-box { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--r-lg); padding: 1.25rem 1.5rem; border-left: 3px solid var(--amber); }
-.compare-box h3 { font-size: 13px; font-weight: 600; color: var(--amber); margin-bottom: 8px; }
-.compare-box p { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 6px; }
-.compare-box a { color: var(--accent); text-decoration: none; }
-.compare-box a:hover { text-decoration: underline; }
-
-footer { border-top: 1px solid var(--border); text-align: center; padding: 1.5rem 2rem; font-size: 12px; color: var(--muted); }
+:root{--bg:#0b0e14;--surface:#13171f;--border:rgba(255,255,255,0.08);--text:#e4e8f2;--muted:#64708a;--accent:#5b8ef5;--green:#2dc87a;--red:#f05555;--amber:#f5a623;--mono:'JetBrains Mono',monospace;--sans:'Inter',sans-serif;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;}
+nav{display:flex;align-items:center;padding:0 2rem;height:52px;border-bottom:1px solid var(--border);gap:12px;}
+.logo{font-family:var(--mono);font-size:13px;font-weight:500;}
+.logo span{color:var(--accent);}
+.pill{font-size:11px;padding:2px 8px;border-radius:4px;background:rgba(91,142,245,0.1);color:var(--accent);border:1px solid rgba(91,142,245,0.25);font-family:var(--mono);}
+.nav-right{margin-left:auto;font-size:12px;color:var(--muted);}
+.main{max-width:900px;margin:0 auto;padding:2rem;}
+h1{font-size:24px;font-weight:600;letter-spacing:-0.02em;margin-bottom:4px;}
+h1 span{color:var(--accent);}
+.sub{color:var(--muted);font-size:13px;margin-bottom:2rem;}
+.source-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:3px 10px;border-radius:4px;font-family:var(--mono);margin-bottom:1.5rem;}
+.source-live{background:rgba(45,200,122,0.12);color:var(--green);border:1px solid rgba(45,200,122,0.25);}
+.source-fallback{background:rgba(245,166,35,0.12);color:var(--amber);border:1px solid rgba(245,166,35,0.25);}
+.dot{width:6px;height:6px;border-radius:50%;animation:blink 2s infinite;}
+.dot-green{background:var(--green);}
+.dot-amber{background:var(--amber);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:2rem;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;}
+.card-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);margin-bottom:4px;}
+.card-value{font-family:var(--mono);font-size:20px;font-weight:500;}
+.green{color:var(--green);}
+.red{color:var(--red);}
+.amber{color:var(--amber);}
+.ctrl{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:16px;}
+.ctrl label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);white-space:nowrap;}
+.ctrl input[type=range]{flex:1;}
+.ctrl .val{font-family:var(--mono);font-size:18px;font-weight:500;min-width:60px;text-align:right;}
+.table-wrap{border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{background:var(--surface);padding:10px 16px;text-align:left;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;font-family:var(--mono);border-bottom:1px solid var(--border);}
+tbody tr{border-bottom:1px solid var(--border);transition:background 0.1s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:var(--surface);}
+tbody tr.atm{background:rgba(91,142,245,0.06);}
+td{padding:10px 16px;font-family:var(--mono);}
+.badge{font-size:10px;padding:2px 7px;border-radius:4px;}
+.b-blue{background:rgba(91,142,245,0.12);color:var(--accent);}
+.b-green{background:rgba(45,200,122,0.12);color:var(--green);}
+.b-red{background:rgba(240,85,85,0.12);color:var(--red);}
+footer{text-align:center;padding:2rem;font-size:12px;color:var(--muted);border-top:1px solid var(--border);margin-top:3rem;}
 </style>
 </head>
 <body>
-
 <nav>
-  <div class="nav-logo">SPCX <span>Options</span> Pricer</div>
-  <span class="nav-tag">Black-Scholes</span>
-  <div class="nav-right">
-    <span class="live-dot"></span>
-    <span>Today: June 23, 2026 &nbsp;·&nbsp; Expiry: Jan 16, 2027</span>
-  </div>
+  <div class="logo">SPCX <span>Options</span></div>
+  <span class="pill">Black-Scholes</span>
+  <div class="nav-right">σ = 100% · r = 4% · Expiry Jan 16 2027</div>
 </nav>
 
-<div class="hero">
-  <div class="hero-eyebrow">Space Exploration Technologies Corp · NASDAQ: SPCX</div>
-  <div class="hero-row">
-    <h1>SPCX <span>Options</span> Dashboard</h1>
-    <div class="stock-price-badge">
-      <div class="label">Last close</div>
-      <div class="price" id="closePrice">$165.78</div>
-      <div class="change">▼ 16.43% June 22</div>
-    </div>
-  </div>
-  <p class="hero-desc">Black-Scholes option prices for calls and puts across strikes $100–$200, for today and tomorrow. Risk-free rate 4%, implied volatility 100% annualised. Expiry Jan 16, 2027.</p>
-</div>
+<div class="main">
+  <h1>SPCX <span>Option Pricer</span></h1>
+  <p class="sub">European calls and puts · Strikes $100–$200 · Live price via Yahoo Finance</p>
 
-<div class="controls">
-  <div class="ctrl">
-    <label>Today's stock price (S₀)</label>
-    <div class="ctrl-row">
-      <input type="range" min="130" max="230" value="166" step="0.5" id="s0" oninput="update()">
-      <span class="val" id="s0v">$166.00</span>
-    </div>
-    <div class="sub">SPCX closed at $165.78 on June 22</div>
+  <div id="sourceBadge" class="source-badge source-fallback">
+    <span class="dot dot-amber"></span>
+    <span id="sourceText">Fetching live price...</span>
   </div>
-  <div class="ctrl">
-    <label>Tomorrow's stock price (S₁)</label>
-    <div class="ctrl-row">
-      <input type="range" min="130" max="230" value="168" step="0.5" id="s1" oninput="update()">
-      <span class="val" id="s1v">$168.00</span>
-    </div>
-    <div class="sub">Adjust to see day-over-day theta decay</div>
-  </div>
-  <div class="ctrl">
-    <label>Implied volatility (σ)</label>
-    <div class="ctrl-row">
-      <input type="range" min="50" max="200" value="100" step="5" id="vol" oninput="update()">
-      <span class="val" id="volv">100%</span>
-    </div>
-    <div class="sub">Given as 100% annualised</div>
-  </div>
-  <div class="ctrl">
-    <label>Risk-free rate (r)</label>
-    <div class="ctrl-row">
-      <input type="range" min="1" max="10" value="4" step="0.25" id="rf" oninput="update()">
-      <span class="val" id="rfv">4.00%</span>
-    </div>
-    <div class="sub">US 10Y Treasury proxy</div>
-  </div>
-</div>
 
-<div class="summary">
-  <div class="stat">
-    <div class="stat-label">Days to expiry</div>
-    <div class="stat-value" id="dte">207</div>
-    <div class="stat-sub">June 23 → Jan 16, 2027</div>
+  <div class="cards">
+    <div class="card"><div class="card-label">Stock price (live)</div><div class="card-value" id="stockCard">...</div></div>
+    <div class="card"><div class="card-label">Implied vol</div><div class="card-value amber">100%</div></div>
+    <div class="card"><div class="card-label">Risk-free rate</div><div class="card-value">4.00%</div></div>
+    <div class="card"><div class="card-label">Days to expiry</div><div class="card-value" id="dteCard">—</div></div>
+    <div class="card"><div class="card-label">ATM Call</div><div class="card-value green" id="atmCall">—</div></div>
+    <div class="card"><div class="card-label">ATM Put</div><div class="card-value red" id="atmPut">—</div></div>
   </div>
-  <div class="stat">
-    <div class="stat-label">Time (years)</div>
-    <div class="stat-value" id="tval">0.567</div>
-    <div class="stat-sub">T used in BS formula</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">ATM Call (today)</div>
-    <div class="stat-value green" id="atm-call">—</div>
-    <div class="stat-sub">Strike nearest to S₀</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">ATM Put (today)</div>
-    <div class="stat-value" style="color:var(--red)" id="atm-put">—</div>
-    <div class="stat-sub">Strike nearest to S₀</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">Daily theta (ATM call)</div>
-    <div class="stat-value amber" id="theta-stat">—</div>
-    <div class="stat-sub">Value lost per day</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">Put-call parity check</div>
-    <div class="stat-value green" id="parity">✓</div>
-    <div class="stat-sub">C - P = S - Ke⁻ʳᵀ</div>
-  </div>
-</div>
 
-<div class="tabs" style="margin-top:1.5rem">
-  <button class="tab active" onclick="showTab('both', this)">Calls &amp; Puts</button>
-  <button class="tab" onclick="showTab('calls', this)">Calls only</button>
-  <button class="tab" onclick="showTab('puts', this)">Puts only</button>
-  <button class="tab" onclick="showTab('changes', this)">Day-over-day changes</button>
-</div>
+  <div class="ctrl">
+    <label>Highlight strike</label>
+    <input type="range" min="100" max="200" step="10" value="160" id="strikeSlider" oninput="render()">
+    <span class="val" id="strikeVal">$160</span>
+  </div>
 
-<div class="table-section">
   <div class="table-wrap">
-    <table id="mainTable">
-      <thead id="thead"></thead>
-      <tbody id="tbody"></tbody>
+    <table>
+      <thead>
+        <tr>
+          <th>Strike</th>
+          <th>Status</th>
+          <th style="color:var(--green)">Call price</th>
+          <th style="color:var(--green)">Intrinsic</th>
+          <th style="color:var(--green)">Time value</th>
+          <th style="color:var(--red)">Put price</th>
+          <th style="color:var(--red)">Intrinsic</th>
+          <th style="color:var(--red)">Time value</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:2rem">Loading...</td></tr></tbody>
     </table>
   </div>
 </div>
 
-<div class="explainer" style="margin-top:0">
-  <div class="explainer-grid">
-    <div class="exp-card">
-      <h3>Black-Scholes formula</h3>
-      <p><strong>Call = S·N(d₁) − K·e⁻ʳᵀ·N(d₂)</strong><br>
-      <strong>Put = K·e⁻ʳᵀ·N(−d₂) − S·N(−d₁)</strong><br><br>
-      Where d₁ = [ln(S/K) + (r + σ²/2)T] / (σ√T) and d₂ = d₁ − σ√T. N(x) is the cumulative normal distribution. At 100% vol, options are very expensive — the stock can plausibly double or halve before expiry.</p>
-    </div>
-    <div class="exp-card">
-      <h3>Why options are pricey at 100% vol</h3>
-      <p>With σ = 100%, one standard deviation move over 0.567 years is <strong>±75%</strong> of the stock price. That means the market is saying there's roughly a 68% chance SPCX is anywhere between <strong>$42 and $290</strong> by January. Options reflect this enormous uncertainty with high premiums. SPCX just IPO'd — 100% vol is realistic for a newly listed high-growth stock.</p>
-    </div>
-    <div class="exp-card">
-      <h3>What theta means here</h3>
-      <p>Theta is how much the option loses each day just from time passing — assuming the stock doesn't move. With only 207 days to expiry and high volatility, <strong>theta is large</strong>. Every day you hold a long option position costs you money even if SpaceX stays flat. This is why option sellers love high-vol stocks.</p>
-    </div>
-    <div class="exp-card">
-      <h3>Put-call parity</h3>
-      <p>For any pair of European call and put with the same strike and expiry: <strong>C − P = S − K·e⁻ʳᵀ</strong>. This must hold — if it doesn't, you can make a risk-free profit. All prices in this table satisfy parity. The difference between call and put at a given strike tells you exactly how far in or out of the money that strike is in present-value terms.</p>
-    </div>
-    <div class="exp-card">
-      <h3>ITM / OTM / ATM explained</h3>
-      <p><strong>In the money (ITM call):</strong> strike below current stock price — already profitable if exercised now.<br>
-      <strong>Out of the money (OTM call):</strong> strike above stock price — needs the stock to rise to be worth anything at expiry.<br>
-      <strong>At the money (ATM):</strong> strike closest to current price — most sensitive to volatility changes.</p>
-    </div>
-    <div class="exp-card">
-      <h3>Why today vs tomorrow matters</h3>
-      <p>Even if the stock price stays exactly the same, options lose a tiny bit of value each day. The "tomorrow" column shows prices with one fewer day to expiry. The difference between today and tomorrow (holding stock price constant) is pure <strong>theta decay</strong> — the daily cost of holding the option.</p>
-    </div>
-  </div>
-</div>
-
-<div class="compare-note">
-  <div class="compare-box">
-    <h3>⚠ Comparing with real market prices</h3>
-    <p>SPCX listed on Nasdaq on <strong>June 12, 2026</strong> — only 11 days ago. Options markets typically begin listing contracts within 2–4 weeks of an IPO, so January 2027 strikes may just be appearing. To find real prices:</p>
-    <p>
-      <strong>Yahoo Finance:</strong> <a href="https://finance.yahoo.com/quote/SPCX/options/" target="_blank">finance.yahoo.com/quote/SPCX/options</a> → select the Jan 16, 2027 expiry if available.<br>
-      <strong>Nasdaq:</strong> <a href="https://www.nasdaq.com/market-activity/stocks/spcx/option-chain" target="_blank">nasdaq.com/market-activity/stocks/spcx/option-chain</a><br>
-      <strong>Key thing to check:</strong> Real market prices will show a bid/ask spread — a new stock like SPCX will have very wide spreads (the difference between what buyers will pay and what sellers want). The Black-Scholes price here is the theoretical fair value sitting between the bid and ask. If real prices differ significantly, it's because the market is using a <strong>different implied volatility</strong> than 100% — check the "implied vol" column on Yahoo Finance for each strike and compare.
-    </p>
-    <p>With SPCX down 16% yesterday and 24% over three days, short-dated put options will be expensive as traders buy protection. Longer-dated January 2027 options will reflect the market's uncertainty about where SPCX settles after post-IPO volatility.</p>
-  </div>
-</div>
-
-<footer>Black-Scholes model · SPCX (Space Exploration Technologies Corp.) · For educational purposes only · Not financial advice</footer>
+<footer>Black-Scholes · Yahoo Finance price feed · Educational purposes only · Not financial advice</footer>
 
 <script>
+const FALLBACK = 166;
+const FMP_KEY = 'oYsgqkQeFD32MWERNbj29qo6XcoSjqeg';
+const sig = 1.0, r = 0.04;
 const STRIKES = [100,110,120,130,140,150,160,170,180,190,200];
-let currentTab = 'both';
+let S = FALLBACK;
 
-function erf(x) {
-  const t = 1 / (1 + 0.3275911 * Math.abs(x));
-  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
-  return x < 0 ? -y : y;
+function erf(x){
+  const t=1/(1+0.3275911*Math.abs(x));
+  const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);
+  return x<0?-y:y;
+}
+function N(x){return 0.5*(1+erf(x/Math.sqrt(2)));}
+function bs(K,type){
+  const T=daysLeft()/365;
+  const d1=(Math.log(S/K)+(r+sig*sig/2)*T)/(sig*Math.sqrt(T));
+  const d2=d1-sig*Math.sqrt(T);
+  return type==='call'?S*N(d1)-K*Math.exp(-r*T)*N(d2):K*Math.exp(-r*T)*N(-d2)-S*N(-d1);
+}
+function daysLeft(){
+  return Math.max(1,Math.round((new Date('2027-01-16')-new Date())/86400000));
+}
+function fmt(n){return '$'+n.toFixed(2);}
+
+function setSource(live, price, source){
+  const badge=document.getElementById('sourceBadge');
+  const text=document.getElementById('sourceText');
+  badge.className='source-badge '+(live?'source-live':'source-fallback');
+  badge.querySelector('.dot').className='dot '+(live?'dot-green':'dot-amber');
+  text.textContent=live?`Live · $${price.toFixed(2)} via ${source}`:`Fallback price $${price.toFixed(2)} · Yahoo Finance blocked (CORS)`;
 }
 
-function N(x) { return 0.5 * (1 + erf(x / Math.sqrt(2))); }
+function render(){
+  const sel=parseInt(document.getElementById('strikeSlider').value);
+  document.getElementById('strikeVal').textContent='$'+sel;
+  document.getElementById('stockCard').textContent=fmt(S);
+  document.getElementById('dteCard').textContent=daysLeft();
+  const atmK=STRIKES.reduce((a,b)=>Math.abs(b-S)<Math.abs(a-S)?b:a);
+  document.getElementById('atmCall').textContent=fmt(bs(atmK,'call'));
+  document.getElementById('atmPut').textContent=fmt(bs(atmK,'put'));
 
-function bs(S, K, T, r, sig, type) {
-  if (T <= 0) return type === 'call' ? Math.max(0, S - K) : Math.max(0, K - S);
-  const d1 = (Math.log(S / K) + (r + sig * sig / 2) * T) / (sig * Math.sqrt(T));
-  const d2 = d1 - sig * Math.sqrt(T);
-  if (type === 'call') return S * N(d1) - K * Math.exp(-r * T) * N(d2);
-  return K * Math.exp(-r * T) * N(-d2) - S * N(-d1);
-}
-
-function fmt(n) { return '$' + n.toFixed(2); }
-function fmtDiff(n) { 
-  const s = n >= 0 ? '+' : '';
-  return s + '$' + n.toFixed(2);
-}
-
-function showTab(tab, btn) {
-  currentTab = tab;
-  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  update();
-}
-
-function update() {
-  const S0 = parseFloat(document.getElementById('s0').value);
-  const S1 = parseFloat(document.getElementById('s1').value);
-  const sig = parseFloat(document.getElementById('vol').value) / 100;
-  const r = parseFloat(document.getElementById('rf').value) / 100;
-
-  document.getElementById('s0v').textContent = '$' + S0.toFixed(2);
-  document.getElementById('s1v').textContent = '$' + S1.toFixed(2);
-  document.getElementById('volv').textContent = parseFloat(document.getElementById('vol').value).toFixed(0) + '%';
-  document.getElementById('rfv').textContent = parseFloat(document.getElementById('rf').value).toFixed(2) + '%';
-
-  const today = new Date('2026-06-23');
-  const expiry = new Date('2027-01-16');
-  const msPerDay = 1000 * 60 * 60 * 24;
-  const daysToday = Math.round((expiry - today) / msPerDay);
-  const daysTomorrow = daysToday - 1;
-  const T0 = daysToday / 365;
-  const T1 = daysTomorrow / 365;
-
-  document.getElementById('dte').textContent = daysToday;
-  document.getElementById('tval').textContent = T0.toFixed(4);
-
-  const atmStrike = STRIKES.reduce((a, b) => Math.abs(b - S0) < Math.abs(a - S0) ? b : a);
-  const atmCall = bs(S0, atmStrike, T0, r, sig, 'call');
-  const atmPut = bs(S0, atmStrike, T0, r, sig, 'put');
-  const atmCallTomorrow = bs(S0, atmStrike, T1, r, sig, 'call');
-  const theta = atmCallTomorrow - atmCall;
-
-  document.getElementById('atm-call').textContent = fmt(atmCall);
-  document.getElementById('atm-put').textContent = fmt(atmPut);
-  document.getElementById('theta-stat').textContent = fmtDiff(theta) + '/day';
-
-  const parityLeft = atmCall - atmPut;
-  const parityRight = S0 - atmStrike * Math.exp(-r * T0);
-  const parityOk = Math.abs(parityLeft - parityRight) < 0.01;
-  document.getElementById('parity').textContent = parityOk ? '✓ OK' : '✗ Error';
-
-  const thead = document.getElementById('thead');
-  const tbody = document.getElementById('tbody');
-
-  let theadHTML = '';
-  let tbodyHTML = '';
-
-  if (currentTab === 'both') {
-    theadHTML = `
-      <tr>
-        <th rowspan="2" style="vertical-align:bottom">Strike</th>
-        <th rowspan="2" style="vertical-align:bottom">Status</th>
-        <th colspan="3" class="group-header calls">CALL OPTIONS</th>
-        <th colspan="3" class="group-header puts">PUT OPTIONS</th>
-      </tr>
-      <tr>
-        <th>Today price</th>
-        <th>Tomorrow</th>
-        <th>Θ change</th>
-        <th class="border-left">Today price</th>
-        <th>Tomorrow</th>
-        <th>Θ change</th>
-      </tr>`;
-
-    STRIKES.forEach(K => {
-      const c0 = bs(S0, K, T0, r, sig, 'call');
-      const c1 = bs(S0, K, T1, r, sig, 'call');
-      const p0 = bs(S0, K, T0, r, sig, 'put');
-      const p1 = bs(S0, K, T1, r, sig, 'put');
-      const dc = c1 - c0;
-      const dp = p1 - p0;
-      const isATM = K === atmStrike;
-      const isITMCall = K < S0;
-      const isITMPut = K > S0;
-      let rowClass = '';
-      if (isATM) rowClass = 'atm';
-      else if (isITMCall) rowClass = 'itm-call';
-      else if (isITMPut) rowClass = 'itm-put';
-
-      let badge = '';
-      if (isATM) badge = '<span class="badge badge-blue">ATM</span>';
-      else if (K < S0) badge = '<span class="badge badge-green">Call ITM</span>';
-      else badge = '<span class="badge badge-red">Put ITM</span>';
-
-      tbodyHTML += `
-        <tr class="${rowClass}">
-          <td class="mono" style="font-weight:600;font-size:15px">$${K}</td>
-          <td>${badge}</td>
-          <td class="green">${fmt(c0)}</td>
-          <td class="mono" style="color:var(--muted)">${fmt(c1)}</td>
-          <td class="amber">${fmtDiff(dc)}</td>
-          <td class="red border-left">${fmt(p0)}</td>
-          <td class="mono" style="color:var(--muted)">${fmt(p1)}</td>
-          <td class="amber">${fmtDiff(dp)}</td>
-        </tr>`;
-    });
-  }
-
-  else if (currentTab === 'calls') {
-    theadHTML = `<tr>
-      <th>Strike</th><th>Status</th>
-      <th>Intrinsic value</th>
-      <th>Today (BS price)</th>
-      <th>Tomorrow</th>
-      <th>Daily theta</th>
-      <th>Time value</th>
+  document.getElementById('tbody').innerHTML=STRIKES.map(K=>{
+    const c=bs(K,'call'),p=bs(K,'put');
+    const ci=Math.max(0,S-K),pi=Math.max(0,K-S);
+    const isATM=K===atmK,isSel=K===sel;
+    const badge=isATM?'ATM':K<S?'Call ITM':'Put ITM';
+    const bc=isATM?'b-blue':K<S?'b-green':'b-red';
+    return `<tr class="${isATM?'atm':''}" ${isSel?'style="outline:1.5px solid var(--accent);outline-offset:-1px;"':''}>
+      <td style="font-weight:600;font-size:15px">$${K}</td>
+      <td><span class="badge ${bc}">${badge}</span></td>
+      <td class="green">${fmt(c)}</td>
+      <td style="color:var(--muted)">${fmt(ci)}</td>
+      <td style="color:var(--accent)">${fmt(c-ci)}</td>
+      <td class="red">${fmt(p)}</td>
+      <td style="color:var(--muted)">${fmt(pi)}</td>
+      <td style="color:var(--accent)">${fmt(p-pi)}</td>
     </tr>`;
-    STRIKES.forEach(K => {
-      const c0 = bs(S0, K, T0, r, sig, 'call');
-      const c1 = bs(S0, K, T1, r, sig, 'call');
-      const intrinsic = Math.max(0, S0 - K);
-      const timeVal = c0 - intrinsic;
-      const isATM = K === atmStrike;
-      const rowClass = isATM ? 'atm' : (K < S0 ? 'itm-call' : '');
-      const badge = isATM ? '<span class="badge badge-blue">ATM</span>' : (K < S0 ? '<span class="badge badge-green">ITM</span>' : '<span class="badge badge-amber">OTM</span>');
-      tbodyHTML += `<tr class="${rowClass}">
-        <td class="mono" style="font-weight:600;font-size:15px">$${K}</td>
-        <td>${badge}</td>
-        <td class="mono">${fmt(intrinsic)}</td>
-        <td class="green">${fmt(c0)}</td>
-        <td class="mono" style="color:var(--muted)">${fmt(c1)}</td>
-        <td class="amber">${fmtDiff(c1 - c0)}</td>
-        <td class="accent">${fmt(timeVal)}</td>
-      </tr>`;
-    });
-  }
-
-  else if (currentTab === 'puts') {
-    theadHTML = `<tr>
-      <th>Strike</th><th>Status</th>
-      <th>Intrinsic value</th>
-      <th>Today (BS price)</th>
-      <th>Tomorrow</th>
-      <th>Daily theta</th>
-      <th>Time value</th>
-    </tr>`;
-    STRIKES.forEach(K => {
-      const p0 = bs(S0, K, T0, r, sig, 'put');
-      const p1 = bs(S0, K, T1, r, sig, 'put');
-      const intrinsic = Math.max(0, K - S0);
-      const timeVal = p0 - intrinsic;
-      const isATM = K === atmStrike;
-      const rowClass = isATM ? 'atm' : (K > S0 ? 'itm-put' : '');
-      const badge = isATM ? '<span class="badge badge-blue">ATM</span>' : (K > S0 ? '<span class="badge badge-red">ITM</span>' : '<span class="badge badge-amber">OTM</span>');
-      tbodyHTML += `<tr class="${rowClass}">
-        <td class="mono" style="font-weight:600;font-size:15px">$${K}</td>
-        <td>${badge}</td>
-        <td class="mono">${fmt(intrinsic)}</td>
-        <td class="red">${fmt(p0)}</td>
-        <td class="mono" style="color:var(--muted)">${fmt(p1)}</td>
-        <td class="amber">${fmtDiff(p1 - p0)}</td>
-        <td class="accent">${fmt(timeVal)}</td>
-      </tr>`;
-    });
-  }
-
-  else if (currentTab === 'changes') {
-    theadHTML = `<tr>
-      <th>Strike</th><th>Status</th>
-      <th>Call today</th>
-      <th>Call tomorrow</th>
-      <th>Call Δ (theta)</th>
-      <th class="border-left">Put today</th>
-      <th>Put tomorrow</th>
-      <th>Put Δ (theta)</th>
-      <th>Put-call parity</th>
-    </tr>`;
-    STRIKES.forEach(K => {
-      const c0 = bs(S0, K, T0, r, sig, 'call');
-      const c1 = bs(S0, K, T1, r, sig, 'call');
-      const p0 = bs(S0, K, T0, r, sig, 'put');
-      const p1 = bs(S0, K, T1, r, sig, 'put');
-      const parity = c0 - p0;
-      const parityTheory = S0 - K * Math.exp(-r * T0);
-      const parityOk = Math.abs(parity - parityTheory) < 0.02;
-      const isATM = K === atmStrike;
-      const rowClass = isATM ? 'atm' : '';
-      const badge = isATM ? '<span class="badge badge-blue">ATM</span>' : (K < S0 ? '<span class="badge badge-green">C-ITM</span>' : '<span class="badge badge-red">P-ITM</span>');
-      tbodyHTML += `<tr class="${rowClass}">
-        <td class="mono" style="font-weight:600;font-size:15px">$${K}</td>
-        <td>${badge}</td>
-        <td class="green">${fmt(c0)}</td>
-        <td class="mono" style="color:var(--muted)">${fmt(c1)}</td>
-        <td class="amber">${fmtDiff(c1-c0)}</td>
-        <td class="red border-left">${fmt(p0)}</td>
-        <td class="mono" style="color:var(--muted)">${fmt(p1)}</td>
-        <td class="amber">${fmtDiff(p1-p0)}</td>
-        <td style="color:${parityOk ? 'var(--green)' : 'var(--red)'};font-family:var(--mono);font-size:12px">${parityOk ? '✓ ' + fmt(parity) : '✗ ' + fmt(parity)}</td>
-      </tr>`;
-    });
-  }
-
-  thead.innerHTML = theadHTML;
-  tbody.innerHTML = tbodyHTML;
+  }).join('');
 }
 
-update();
+async function fetchYahoo(){
+  try {
+    const res=await fetch('https://query1.finance.yahoo.com/v8/finance/chart/SPCX?interval=1d&range=1d');
+    if(!res.ok) throw new Error('bad status');
+    const json=await res.json();
+    const price=json?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    if(!price||price<=0) throw new Error('no price');
+    return price;
+  } catch(e){ return null; }
+}
+
+async function fetchFMP(){
+  try {
+    const res=await fetch(`https://financialmodelingprep.com/stable/quote?symbol=SPCX&apikey=${FMP_KEY}`);
+    if(!res.ok) throw new Error('bad status');
+    const json=await res.json();
+    const price=json?.[0]?.price;
+    if(!price||price<=0) throw new Error('no price');
+    return price;
+  } catch(e){ return null; }
+}
+
+async function init(){
+  render();
+  let price=await fetchYahoo();
+  if(price){
+    S=price; setSource(true,price,'Yahoo Finance'); render(); return;
+  }
+  price=await fetchFMP();
+  if(price){
+    S=price; setSource(true,price,'Financial Modeling Prep'); render(); return;
+  }
+  S=FALLBACK; setSource(false,FALLBACK,''); render();
+}
+
+init();
 </script>
 </body>
 </html>
